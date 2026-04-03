@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Upload Vessel Data</title>
+    <style>
+        body { font-family: Arial, sans-serif; background: #f4f9ff; margin: 0; padding: 20px; }
+        .container { max-width: 600px; margin: 50px auto; background: white; padding: 2rem; border-radius: 10px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+        h2 { color: #1e3c72; }
+        input[type="file"] { margin: 20px 0; }
+        button { background: #2c7da0; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; }
+        button:hover { background: #1e5a7d; }
+        .error { color: red; margin-top: 10px; }
+        a { display: inline-block; margin-top: 20px; color: #2c7da0; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Upload Your Vessel Data (CSV)</h2>
+        <p>CSV must contain columns: <strong>vessel_id, timestamp, lat, lon, speed, course</strong></p>
+        <form method="post" enctype="multipart/form-data">
+            <input type="file" name="file" accept=".csv" required>
+            <br>
+            <button type="submit">Upload & Detect Anomalies</button>
+            {% if error %}
+                <div class="error">{{ error }}</div>
+            {% endif %}
+        </form>
+        <a href="{{ url_for('dashboard') }}">← Back to Dashboard</a>
+    </div>
+</body>
+</html>

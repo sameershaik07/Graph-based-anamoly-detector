@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Maritime Anomaly Detection</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f0f4f8;
+        }
+
+        .navbar {
+            background: #1e3c72;
+            color: white;
+            padding: 12px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        .navbar h2 {
+            margin: 0;
+            font-size: 1.3rem;
+        }
+
+        .nav-links a {
+            color: white;
+            text-decoration: none;
+            margin-left: 20px;
+            background: #2c7da0;
+            padding: 6px 12px;
+            border-radius: 5px;
+            transition: 0.2s;
+        }
+
+        .nav-links a:hover {
+            background: #1e5a7d;
+        }
+
+        .dashboard-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            padding: 20px;
+        }
+
+        .map-panel {
+            flex: 2;
+            min-width: 300px;
+            height: 500px;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .right-panel {
+            flex: 1;
+            min-width: 280px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 15px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .card h3 {
+            margin-top: 0;
+            border-left: 4px solid #2c7da0;
+            padding-left: 10px;
+            margin-bottom: 15px;
+        }
+
+        .alert-list {
+            max-height: 250px;
+            overflow-y: auto;
+        }
+
+        .alert-item {
+            padding: 8px;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .alert-item.high {
+            background: #ffe6e6;
+            border-left: 4px solid #d9534f;
+        }
+
+        .alert-score {
+            font-weight: bold;
+            color: #d9534f;
+        }
+
+        canvas {
+            max-height: 300px;
+            width: 100%;
+        }
+
+        footer {
+            text-align: center;
+            padding: 15px;
+            background: #e9ecef;
+            font-size: 0.8rem;
+            color: #555;
+        }
+
+        @media (max-width: 768px) {
+            .dashboard-container {
+                flex-direction: column;
+            }
+
+            .map-panel {
+                height: 400px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="navbar">
+        <h2>🚢 Maritime Anomaly Detection</h2>
+        <div class="nav-links">
+            <a href="{{ url_for('upload_page') }}">📁 Upload Data</a>
+            <a href="{{ url_for('logout') }}">🚪 Logout</a>
+        </div>
+    </div>
+
+    <div class="dashboard-container">
+        <div id="map" class="map-panel"></div>
+
+        <div class="right-panel">
+            <div class="card">
+                <h3>⚠️ Active Alerts</h3>
+                <div id="alertsList" class="alert-list">
+                    <p style="color: #888;">Loading alerts...</p>
+                </div>
+            </div>
+            <div class="card">
+                <h3>📊 Anomaly Score (per vessel)</h3>
+                <canvas id="scoreChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        <p>Vessels with speed > 15 knots receive higher anomaly scores. Red markers indicate high risk.</p>
+    </footer>
+
+    <script>
+        let map = L.map('map').setView([27.0, -87.5], 6);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors'
+        }).addTo(map);
+
+        let markersLayer = L.layerGroup().addTo(map);
+        let chartInstance = null;
+
+        function fetchData() {
+            fetch('/map_data')
+                .then(response => response.json())
+                .then(data => {
+                    markersLayer.clearLayers();
+
+                    let alerts = [];
+                    let vesselNames = [];
+                    let scores = [];
+                    let latLngs = [];
+
+                    data.forEach(vessel => {
+                        let lat = parseFloat(vessel.lat);
+                        let lon = parseFloat(vessel.lon);
+                        if (isNaN(lat) || isNaN(lon)) return;
+                        latLngs.push([lat, lon]);
+
+                        let color = `hsl(${120 - 120 * vessel.anomaly_score}, 70%, 50%)`;
+                        let circle = L.circleMarker([lat, lon], {
+                            radius: 8,
+                            fillColor: color,
+                            color: '#000',
+                            weight: 1,
+                            fillOpacity: 0.8
+                        }).addTo(markersLayer);
+                        circle.bindPopup(`
+                            <b>Vessel ${vessel.vessel_id}</b><br>
+                            Speed: ${vessel.speed.toFixed(1)} kn<br>
+                            Anomaly score: ${vessel.anomaly_score.toFixed(2)}<br>
+                            ${vessel.anomaly ? '⚠️ ALERT' : 'Normal'}
+                        `);
+
+                        if (vessel.anomaly) {
+                            alerts.push(vessel);
+                        }
+                        vesselNames.push(`Vessel ${vessel.vessel_id}`);
+                        scores.push(vessel.anomaly_score);
+                    });
+
+                    // Auto-zoom to markers if any
+                    if (latLngs.length > 0) {
+                        let bounds = L.latLngBounds(latLngs);
+                        map.fitBounds(bounds, { padding: [20, 20] });
+                    }
+
+                    // Update alerts list
+                    const alertsDiv = document.getElementById('alertsList');
+                    if (alerts.length === 0) {
+                        alertsDiv.innerHTML = '<p style="color: #888;">No active alerts.</p>';
+                    } else {
+                        alertsDiv.innerHTML = alerts.map(v => `
+                            <div class="alert-item high">
+                                <span><strong>Vessel ${v.vessel_id}</strong> (${v.speed.toFixed(1)} kn)</span>
+                                <span class="alert-score">Score: ${v.anomaly_score.toFixed(2)}</span>
+                            </div>
+                        `).join('');
+                    }
+
+                    // Update bar chart
+                    const ctx = document.getElementById('scoreChart').getContext('2d');
+                    if (chartInstance) chartInstance.destroy();
+                    chartInstance = new Chart(ctx, {
+                        type: 'bar',
+                        data: {
+                            labels: vesselNames,
+                            datasets: [{
+                                label: 'Anomaly Score (0=normal, 1=high)',
+                                data: scores,
+                                backgroundColor: scores.map(s => `hsl(${120 - 120 * s}, 70%, 50%)`),
+                                borderWidth: 1
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: true,
+                            scales: {
+                                y: { beginAtZero: true, max: 1, title: { display: true, text: 'Anomaly Score' } }
+                            },
+                            plugins: {
+                                legend: { display: false },
+                                tooltip: { callbacks: { label: (ctx) => `Score: ${ctx.raw.toFixed(2)}` } }
+                            }
+                        }
+                    });
+                })
+                .catch(err => console.error('Error fetching data:', err));
+        }
+
+        fetchData();
+        setInterval(fetchData, 10000);
+    </script>
+</body>
+
+</html>
