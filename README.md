@@ -1,246 +1,114 @@
-# 🚢 Maritime Watch — Anomaly Detection Platform
+# Graph-Based Anomaly Detector for Maritime Domain Awareness
 
-> Graph-based multi-dimensional anomaly detection for maritime vessel monitoring.
-> **No single parameter can trigger an alert alone.**
+![GitHub last commit](https://img.shields.io/github/last-commit/sameershaik07/Graph-based-anamoly-detector?style=for-the-badge)
+![GitHub repo size](https://img.shields.io/github/repo-size/sameershaik07/Graph-based-anamoly-detector?style=for-the-badge)
+![GitHub language count](https://img.shields.io/github/languages/count/sameershaik07/Graph-based-anamoly-detector?style=for-the-badge)
+![GitHub top language](https://img.shields.io/github/languages/top/sameershaik07/Graph-based-anamoly-detector?style=for-the-badge)
 
-![Python](https://img.shields.io/badge/Python-3.10+-blue)
-![Flask](https://img.shields.io/badge/Flask-3.0-green)
-![License](https://img.shields.io/badge/License-MIT-yellow)
+## 🚀 Project Overview
 
-## Architecture
+This project implements a **Graph-Based Anomaly Detection System** designed for **Maritime Domain Awareness (MDA)**. It leverages **Multi-Modal Sensor Fusion** and **Machine Learning** to identify suspicious vessel behaviors, such as illegal fishing, smuggling, or piracy, by analyzing vessel interaction patterns.
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                     MARITIME WATCH                          │
-├─────────────┬───────────────────────┬───────────────────────┤
-│  Frontend   │     Flask API         │    ML Pipeline        │
-│             │                       │                       │
-│  Leaflet.js │  /api/auth/*          │  preprocessor.py      │
-│  Chart.js   │  /api/vessels         │  graph_builder.py     │
-│  Dashboard  │  /api/anomalies       │  features.py (5 dim)  │
-│  Alerts     │  /api/alerts          │  scorer.py            │
-│  Upload     │  /api/stats           │  anomaly_engine.py    │
-│  Vessel     │  /api/vessel/<id>     │  pipeline.py          │
-│  Profile    │  /api/upload          │                       │
-├─────────────┴───────────────────────┼───────────────────────┤
-│          SQLAlchemy ORM             │   NetworkX Graphs     │
-├─────────────────────────────────────┼───────────────────────┤
-│     SQLite (default) / MySQL        │   graphs.pkl          │
-└─────────────────────────────────────┴───────────────────────┘
-```
+The system aims to provide an automated and intelligent solution to enhance maritime security and surveillance, moving beyond traditional rule-based methods to a more adaptive and data-driven approach.
 
-## Quick Start
+## ✨ Features
 
-### 1. Install Dependencies
+-   **Multi-Modal Sensor Fusion**: Integrates data from various sources (e.g., AIS, radar, satellite) to create a comprehensive view of maritime activity.
+-   **Vessel Interaction Graph Construction**: Builds dynamic graphs where nodes represent vessels and edges signify interactions or proximity, capturing complex relationships.
+-   **Machine Learning for Anomaly Detection**: Applies advanced ML algorithms to the constructed graphs to detect unusual patterns and flag potential anomalies.
+-   **Anomaly Scoring**: Assigns risk scores to vessels or interactions, indicating the likelihood of suspicious activity.
+-   **Web-Based Monitoring Dashboard**: Provides a user-friendly interface for real-time visualization of vessel movements, alerts, and anomaly insights.
+-   **Data Preprocessing & Management**: Includes modules for cleaning, transforming, and managing diverse maritime datasets.
 
-```bash
-cd maritime-watch
-pip install -r requirements.txt
-```
+## 🛠️ Technologies Used
 
-### 2. Configure Environment
+-   **Python**: Core programming language.
+-   **Flask**: Web framework for building the monitoring dashboard and API.
+-   **Pandas & NumPy**: For data manipulation and numerical operations.
+-   **Scikit-learn (or similar)**: For machine learning model training and anomaly detection.
+-   **NetworkX (or similar)**: For graph construction and analysis.
+-   **HTML/CSS/JavaScript**: For the front-end of the web application.
+-   **Pickle**: For model serialization.
 
-```bash
-# SQLite is used by default — no database setup needed!
-# To use MySQL, edit .env:
-cp .env.example .env
-```
+## ⚙️ Installation
 
-### 3. Generate Sample Data & Seed Database
+To set up the project locally, follow these steps:
 
-```bash
-python seed.py
-```
+1.  **Clone the repository:**
+    ```bash
+    git clone https://github.com/sameershaik07/Graph-based-anamoly-detector.git
+    cd Graph-based-anamoly-detector
+    ```
 
-This creates:
-- Default users: `admin / maritime2024`, `operator / watch2024`
-- 20 vessels with positions in the Gulf of Mexico
-- Sample CSV at `data/sample_ais_data.csv`
+2.  **Create a virtual environment (recommended):**
+    ```bash
+    python -m venv venv
+    source venv/bin/activate  # On Windows use `venv\Scripts\activate`
+    ```
 
-### 4. Run the Server
+3.  **Install dependencies:**
+    ```bash
+    pip install -r requirements.txt
+    ```
+    *(Note: A `requirements.txt` file is assumed. If not present, you may need to install `flask`, `pandas`, `numpy`, `scikit-learn`, `networkx` manually.)*
 
-```bash
-python app.py
-```
+4.  **Prepare data and models:**
+    The project includes scripts like `data_generator.py`, `preprocess.py`, `graph_builder.py`, and `train_model.py` (or their `enhanced_` versions). You might need to run these to generate necessary data files (`fused_data.csv`, `graphs.pkl`) and trained models (`enhanced_model.pkl`, `feature_names.pkl`).
+    
+    For initial setup, you can run:
+    ```bash
+    python data_generator.py
+    python preprocess.py
+    python graph_builder.py
+    python train_model.py
+    # Or use the enhanced versions if available and preferred
+    python enhanced_data_generator.py
+    python enhanced_train_model.py
+    ```
 
-Visit **http://localhost:5000/login** and sign in with `admin / maritime2024`.
+## 🚀 Usage
 
-### 5. Upload Data
+1.  **Run the Flask application:**
+    ```bash
+    python app.py
+    ```
 
-Go to **Upload** → drop `data/sample_ais_data.csv` → click **Upload & Detect Anomalies**.
+2.  **Access the dashboard:**
+    Open your web browser and navigate to `http://127.0.0.1:5000/` (or the port specified by Flask).
 
----
+3.  **Login:**
+    Use the default credentials (if any are set in `app.py`, e.g., `admin`/`password123`) to access the monitoring dashboard.
 
-## 5-Dimension Scoring System
+4.  **Monitor and Detect Anomalies:**
+    The dashboard will display vessel movements and highlight detected anomalies based on the processed data and trained models.
 
-The anomaly detection engine scores each vessel across **five independent dimensions**.
-A vessel **cannot** be flagged based on a single parameter alone.
-
-| Dimension | Weight | What It Measures | Min Readings |
-|-----------|--------|------------------|-------------|
-| **Kinematic** | 20% | Speed, acceleration, course changes, zigzag patterns | 3 |
-| **Behavioral** | 25% | AIS gaps, loitering, erratic movement, sudden stops | 4 |
-| **Contextual** | 20% | Shipping lane deviation, restricted zones, type mismatch | 1 |
-| **Graph** | 20% | Network centrality, proximity, rendezvous detection | In graph |
-| **Historical** | 15% | Deviation from own speed/course baseline | 20 |
-
-### How Verdicts Work
+## 📂 Project Structure
 
 ```
-                    Dimension scores
-                    ┌─────────────┐
-  Kinematic  ────── │  0.82  ████ │ ← above threshold (0.40)
-  Behavioral ────── │  0.71  ███  │ ← above threshold
-  Contextual ────── │  0.65  ███  │ ← above threshold
-  Graph      ────── │  0.12  █    │ ← below threshold
-  Historical ────── │  N/A       │ ← no data
-                    └─────────────┘
-                         │
-                    3 of 5 above ─── corroboration bonus +18%
-                         │
-                    Weighted score + bonus ── 0.72
-                         │
-                    3 dims ≥ 3 required ── ✅ ALERT
+Graph-based-anamoly-detector/
+├── __pycache__/             # Python cache files
+├── templates/               # HTML templates for Flask app
+├── uploads/                 # Directory for uploaded files
+├── ais_data.csv             # Sample AIS data
+├── app.py                   # Main Flask application
+├── data_generator.py        # Script to generate sample data
+├── enhanced_anomaly_scorer.py # Enhanced anomaly scoring logic
+├── enhanced_data_generator.py # Enhanced data generation script
+├── enhanced_model.pkl       # Trained anomaly detection model
+├── enhanced_train_model.py  # Script to train enhanced model
+├── enhanced_vessel_data.csv # Enhanced vessel data
+├── feature_names.pkl        # Feature names for the model
+├── features.py              # Feature engineering logic
+├── fused_data.csv           # Fused multi-modal data
+├── generate_test_data.py    # Script to generate test data
+├── graph_builder.py         # Script to build vessel interaction graphs
+├── graphs.pkl               # Serialized graph data
+├── preprocess.py            # Data preprocessing script
+├── test_vessels.csv         # Test vessel data
+└── train_model.py           # Script to train the initial model
 ```
 
-### Anti-False-Positive Rules
+## 🤝 Contributing
 
-| Rule | Effect |
-|------|--------|
-| Single dimension above threshold | **Never** produces ALERT |
-| Fewer than 2 dimensions with data | Returns `INSUFFICIENT_DATA` |
-| WARNING requires | ≥ 2 dimensions above threshold + score ≥ 0.35 |
-| ALERT requires | ≥ 3 dimensions above threshold + score ≥ 0.60 |
-| Corroboration bonus | 0% for 0-1 dims, 8% for 2, 18% for 3, 28% for 4, 35% for 5 |
-
----
-
-## API Reference
-
-| Method | Path | Description |
-|--------|------|-------------|
-| `POST` | `/api/auth/login` | Login with `{username, password}` |
-| `POST` | `/api/auth/logout` | End session |
-| `GET` | `/api/auth/me` | Current user info |
-| `POST` | `/api/upload` | Upload CSV (multipart form) |
-| `GET` | `/api/vessels` | All vessels with latest scores |
-| `GET` | `/api/anomalies` | Vessels with score > 0.3 |
-| `GET` | `/api/alerts` | Unacknowledged ALERT-level |
-| `POST` | `/api/alerts/<id>` | Acknowledge alert |
-| `GET` | `/api/stats` | Dashboard summary stats |
-| `GET` | `/api/vessel/<id>` | Full vessel profile |
-| `POST` | `/api/vessel/<id>/flag` | Flag for review |
-| `POST` | `/api/vessel/<id>/safe` | Mark safe |
-| `GET` | `/api/sample-csv` | Download sample data |
-| `GET` | `/api/export` | Export all results |
-
-### Response Formats
-
-**`GET /api/vessels`**
-```json
-[{
-  "vessel_id": "V013",
-  "lat": 24.2,
-  "lon": -87.5,
-  "speed": 22.3,
-  "anomaly_score": 0.78,
-  "status": "ALERT",
-  "confidence": 0.75,
-  "dimensions_available": 3,
-  "dimensions_above_threshold": 3
-}]
-```
-
-**`GET /api/stats`**
-```json
-{
-  "total_vessels": 15,
-  "alert_count": 2,
-  "warning_count": 3,
-  "insufficient_data_count": 0,
-  "avg_score": 0.34,
-  "last_updated": "2024-06-15T10:00:00"
-}
-```
-
----
-
-## Sample CSV Format
-
-```csv
-vessel_id,timestamp,lat,lon,speed,course,ship_type
-V001,2024-06-15 08:00:00,25.500000,-90.000000,12.3,45.2,tanker
-V002,2024-06-15 08:00:00,27.000000,-88.000000,14.1,90.5,cargo
-```
-
-| Column | Type | Description |
-|--------|------|-------------|
-| `vessel_id` | string | Unique vessel identifier |
-| `timestamp` | datetime | `YYYY-MM-DD HH:MM:SS` |
-| `lat` | float | Latitude (-90 to 90) |
-| `lon` | float | Longitude (-180 to 180) |
-| `speed` | float | Speed in knots |
-| `course` | float | Course in degrees (0-360) |
-| `ship_type` | string | tanker, cargo, fishing, passenger, tug, etc. |
-
----
-
-## Running Tests
-
-```bash
-pip install pytest
-python -m pytest tests/ -v
-```
-
-Key test validations:
-- ✅ Single-parameter deviation → never ALERT
-- ✅ `INSUFFICIENT_DATA` when < 2 dimensions
-- ✅ Multi-dimension anomaly → ALERT
-- ✅ Score always in [0.0, 1.0]
-- ✅ V015 (fast-only) false-positive suppression
-- ✅ Full pipeline runs end-to-end
-
----
-
-## Project Structure
-
-```
-maritime-watch/
-├── app.py                 # Flask app + all API routes
-├── config.py              # Environment config
-├── models.py              # SQLAlchemy ORM models
-├── pipeline.py            # End-to-end pipeline orchestrator
-├── anomaly_engine.py      # Detection orchestrator
-├── graph_builder.py       # NetworkX proximity graphs
-├── preprocessor.py        # CSV cleaning + sensor fusion
-├── features.py            # 5-dimension feature extraction
-├── scorer.py              # Multi-dimensional ensemble scorer
-├── seed.py                # Database seeding + sample data
-├── schema.sql             # SQL schema reference
-├── requirements.txt       # Python dependencies
-├── .env                   # Environment variables
-├── static/
-│   ├── css/theme.css      # Maritime ops dark theme
-│   └── js/
-│       ├── map.js         # Leaflet map + markers
-│       ├── alerts.js      # Alert panel
-│       ├── stats.js       # Stats + charts
-│       └── notifications.js # Toasts + browser notifications
-├── templates/
-│   ├── login.html         # Login page
-│   ├── dashboard.html     # Main dashboard
-│   ├── upload.html        # CSV upload
-│   └── vessel.html        # Vessel profile
-├── tests/
-│   ├── test_features.py
-│   ├── test_scorer.py
-│   ├── test_graph_builder.py
-│   ├── test_api.py
-│   └── test_pipeline.py
-└── data/
-    └── sample_ais_data.csv
-```
-
----
-
+Contributions are welcome! If you have suggestions for improvements or new features, please open an issue or submit a pull request.
 
