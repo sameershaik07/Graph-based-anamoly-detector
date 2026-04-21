@@ -4,6 +4,7 @@ import pandas as pd
 import numpy as np
 from flask import Flask, render_template, request, redirect, url_for, session, jsonify
 from werkzeug.utils import secure_filename
+from enhanced_anomaly_scorer import score_vessel_data
 
 app = Flask(__name__)
 app.secret_key = 'your-secret-key-change-this'
@@ -108,6 +109,68 @@ def dashboard():
 
 @app.route('/map_data')
 def map_data():
+    if 'username' not in session:
+        return jsonify([])
+
+    try:
+        with open('graphs.pkl', 'rb') as f:
+            graphs = pickle.load(f)
+        if not graphs:
+            return jsonify([])
+
+        latest_ts, latest_graph = graphs[-1]
+        
+        # Extract node features into DataFrame
+        rows = []
+        for node, data in latest_graph.nodes(data=True):
+            row = {
+                'vessel_id': node,
+                'lat': data.get('lat'),
+                'lon': data.get('lon'),
+                'speed': data.get('speed', 0),
+                'course': data.get('course', 0),
+                'acceleration': data.get('acceleration', 0),
+                'heading_rate': data.get('heading_rate', 0),
+                'distance_to_shipping_lane_nm': data.get('dist_to_lane', 10),
+                'distance_to_port_nm': data.get('dist_to_port', 20),
+                'time_since_last_ais_sec': data.get('ais_gap', 60)
+            }
+            rows.append(row)
+        
+        if not rows:
+            return jsonify([])
+        
+        df_nodes = pd.DataFrame(rows)
+        
+        # Use ML model to score
+        try:
+            scored_df = score_vessel_data(df_nodes)
+        except FileNotFoundError:
+            # Fallback if model not trained
+            scored_df = df_nodes.copy()
+            scored_df['anomaly_score'] = (scored_df['speed'] - 15) / 15
+            scored_df['anomaly_score'] = scored_df['anomaly_score'].clip(0,1)
+            scored_df['is_anomaly'] = scored_df['anomaly_score'] > 0.3
+        
+        # Build markers
+        markers = []
+        for _, row in scored_df.iterrows():
+            if pd.isna(row['lat']) or pd.isna(row['lon']):
+                continue
+            markers.append({
+                'lat': row['lat'],
+                'lon': row['lon'],
+                'vessel_id': row['vessel_id'],
+                'speed': row['speed'],
+                'anomaly_score': float(row['anomaly_score']),
+                'anomaly': bool(row['anomaly_score'] > 0.6)
+            })
+        
+        return jsonify(markers)
+    
+    except Exception as e:
+        print("Error in map_data:", e)
+        return jsonify([])
     if 'username' not in session:
         return jsonify([])
 
